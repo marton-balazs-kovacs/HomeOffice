@@ -1,0 +1,81 @@
+---
+title: "HomeOffice_Pilot_Raw_Processed"
+author: "Marton Kovacs"
+output: html_document
+---
+
+# Load pacakges
+
+```{r}
+library(tidyverse)
+```
+
+# Import data
+
+```{r}
+raw <- read_tsv("Data/Pilot/Raw/HomeOffice_Pilot_Raw_data.tsv")
+```
+
+# Filter participants
+
+We drop responses where the participant did not finish the survey.
+
+```{r}
+raw <-
+  raw %>% 
+  filter(progress == 100)
+```
+
+We also drop responses where the participant did not answer to any of our questions.
+
+```{r}
+questions <- colnames(raw)[11:14]
+
+raw <-
+  raw %>% 
+  filter_at(vars(questions), any_vars(!is.na(.)))
+```
+
+# Calculating mean time spant with the survey
+
+```{r}
+raw %>% 
+  mutate(duration_in_seconds = as.numeric(duration_in_seconds)) %>% 
+  summarise(mean_sec = mean(duration_in_seconds, na.rm = TRUE),
+            mean_min = mean_sec / 60,
+            max_sec = max(duration_in_seconds),
+            min_sec = min(duration_in_seconds),
+            max_min = max_sec / 60,
+            median_sec = median(duration_in_seconds, na.rm = T))
+```
+
+# Drop not needed variables
+
+```{r}
+raw <-
+  raw %>% 
+  select(-start_date,
+         -end_date,
+         -status,
+         -progress,
+         -duration_in_seconds,
+         -finished,
+         -recorded_date,
+         -distribution_channel,
+         -user_language)
+```
+
+# Create a participant id
+
+```{r}
+raw <-
+  raw %>% 
+  rename(participant_id = response_id) %>% 
+  mutate(participant_id = group_indices(., participant_id))
+```
+
+# Saving the dataset
+
+```{r}
+write_tsv(raw, "Data/Pilot/Processed/HomeOffice_Pilot_Processed_data.tsv")
+```

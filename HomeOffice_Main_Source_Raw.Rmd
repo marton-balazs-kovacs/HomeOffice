@@ -1,0 +1,49 @@
+---
+title: "HomeOffice_Source_Raw"
+author: "Marton Kovacs"
+date: '`r format(Sys.time(), "%d %B, %Y")`'
+output: html_document
+---
+
+# Loading packages
+
+```{r}
+library(tidyverse)
+```
+
+# Importing data
+
+```{r}
+source <- read_csv("Data/Main/Source/HomeOffice_Main_May+21,+2020_17.11.csv")
+```
+
+# Saving variables with free text options to review for personal data
+
+```{r}
+comment <- 
+  source %>%
+  slice(-(1:2)) %>% 
+  select(ResponseId,
+         comment,
+         contains("TEXT")) %>% 
+  filter_at(vars(comment, contains("TEXT")), any_vars(!is.na(.)))
+```
+
+```{r}
+write_excel_csv(comment, "Data/Main/Source/HomeOffice_Main_FreeText_data.csv")
+```
+
+# Delete cells cells with personal data in them
+
+```{r}
+
+```
+
+# Write raw data
+
+```{r}
+source %>% 
+  select(-comment) %>% 
+  write_tsv(., "Data/Main/Raw/HomeOffice_Main_Raw_data.tsv")
+```
+

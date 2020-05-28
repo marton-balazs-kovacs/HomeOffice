@@ -1,0 +1,172 @@
+---
+title: "HomeOffice_Raw_Processed"
+author: "Marton Kovacs"
+date: '`r format(Sys.time(), "%d %B, %Y")`'
+output: html_document
+---
+
+# Loading packages
+
+```{r}
+library(tidyverse)
+library(jsonlite)
+```
+
+# Importing data
+
+```{r}
+raw <- read_tsv("Data/Main/Raw/HomeOffice_Main_Raw_data.tsv")
+```
+
+# Import survey structure
+
+```{r}
+survey_structure <- read_json("HomeOffice_Main.qsf")
+```
+
+# Save Qualtrics labels separately
+
+```{r}
+labels <- 
+  raw %>% 
+  slice(1:2)
+```
+
+```{r}
+raw <- 
+  raw %>% 
+  slice(-(1:2))
+```
+
+# Create participant id
+
+```{r}
+raw <- 
+  raw %>% 
+  rename(participant_id = ResponseId)
+```
+
+# Rename variables
+
+```{r}
+raw <- 
+  raw %>% 
+  janitor::clean_names()
+```
+
+# Drop trial responses
+
+```{r}
+raw <- 
+  raw %>% 
+  filter(distribution_channel != "preview")
+```
+
+# Drop not completed 
+
+```{r}
+raw <- 
+  raw %>% 
+  mutate(progress = as.integer(progress)) %>% 
+  filter(progress == 100)
+```
+
+# Median time of responding to the survey
+
+```{r}
+raw %>% 
+  mutate(duration_in_seconds = as.integer(duration_in_seconds)) %>% 
+  summarise(median_resp = median(duration_in_seconds) / 60)
+```
+
+# Responde date range
+
+```{r}
+raw %>% 
+  mutate(recorded_date = lubridate::as_datetime(recorded_date)) %>% 
+  summarise(min_date = min(recorded_date),
+            max_date = max(recorded_date))
+```
+
+# Distributon of responses from different sources
+
+```{r}
+raw %>%
+  group_by(distribution_channel) %>% 
+  count()
+```
+
+# Merge free text responses with other responses for the same column
+
+```{r}
+raw <- 
+  raw %>% 
+  mutate(area_of_research = case_when(area_of_research == "Other:" ~ area_of_research_6_text,
+                                      TRUE ~ area_of_research),
+         living_sit = case_when(living_sit == "Other:" ~ living_sit_7_text,
+                                      TRUE ~ living_sit),
+         need_from_org_11 = case_when(need_from_org_11 == "Other:" ~ need_from_org_11_text,
+                                      TRUE ~ need_from_org_11))
+```
+
+# Create two variables for the number of children and for their age
+
+```{r}
+no_children <- 
+  raw %>%
+  select(participant_id, contains("children")) %>% 
+  gather(key = "age_range", value = "no", -participant_id) %>% 
+  mutate(age_range = case_when(age_range == "children_2" ~ "<1",
+                               age_range == "children_23" ~ "1-3",
+                               age_range == "children_24" ~ "4-6",
+                               age_range == "children_25" ~ "7-12",
+                               age_range == "children_26" ~ "13-18",
+                               age_range == "children_27" ~ "18<"),
+         no= as.integer(no),
+         no = replace_na(no, 0L)) %>% 
+  group_by(participant_id) %>% 
+  summarise(number_of_children = sum(no))
+
+raw <- 
+  raw %>%
+  left_join(., no_children, by = "participant_id")
+```
+
+# Drop not needed variables
+
+```{r}
+raw <- 
+  raw %>% 
+  select(-start_date,
+         -end_date,
+         -distribution_channel,
+         -status,
+         -progress,
+         -finished,
+         -recorded_date,
+         -duration_in_seconds,
+         -user_language,
+         -area_of_research_6_text,
+         -living_sit_7_text,
+         -need_from_org_11_text)
+```
+
+# Mutate variables
+
+For the aspects 1 mean at home, and 7 means in the office.
+
+```{r}
+raw <- 
+  raw %>% 
+  mutate_at(vars(contains("home_office_aspect")), ~ case_when(. == "At home\n\n1\n" ~ "1",
+                                                             . == "In the office\n7\n" ~ "7",
+                                                             TRUE ~ .)) %>% 
+  mutate_at(vars(contains("home_office_aspect")), as.integer)
+```
+
+# Save data
+
+```{r}
+write_tsv(raw, "Data/Main/Processed/HomeOffice_Main_Processed_data.tsv")
+```
+

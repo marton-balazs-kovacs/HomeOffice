@@ -1,0 +1,195 @@
+---
+title: "HomeOffice_Sampling"
+author: "Marton Kovacs"
+output: html_document
+---
+
+# Load packages
+
+```{r, warning = FALSE, message = FALSE}
+library(tidyverse)
+library(readxl)
+library(writexl)
+```
+
+# Import data
+
+We used a scraping code to collect meta information of published articles in the Science Direct database.
+
+```{r, message = FALSE, warning = FALSE}
+email <- read_csv("Data/Sample/HomeOffice_Sample_Mail.csv",
+                  locale = locale(encoding = "UTF-8"))
+```
+
+The list of journals and their subfields at the time of the data collection.
+
+```{r, message = FALSE}
+journal <- read_csv2("Data/Sample/HomeOffice_Sample_Journal.csv",
+                     locale = locale(encoding = "ISO-8859-13"))
+```
+
+Some of these email addresses were used in a different project. We downloaded the used email addresses from the Qualtrics mail sender history and merged them (there were different batches).
+
+```{r}
+used <- read_xlsx("Data/Sample/HomeOffice_Sample_Used.xlsx")
+```
+
+Load previously used batches.
+
+These batchess were used for the pilot survey:
+
+```{r}
+batch_1 <- read_xlsx("Data/Sample/HomeOffice_Sample_Batch_1.xlsx")
+```
+
+```{r}
+batch_2 <- read_xlsx("Data/Sample/HomeOffice_Sample_Batch_2.xlsx")
+```
+
+# Descriptives
+
+We have downloaded the metainformation of `r email %>% distinct(doi) %>% filter(!is.na(doi)) %>% count()` individual articles.
+
+We could extract the email addresses of `r email %>% distinct(email) %>% filter(!is.na(email)) %>% count()` corresponding authors of these articles. This does not mean that all email addresses are working as the automatized scraper code coulde make mistakes.
+
+At the time of our data collection there were `r journal %>% distinct(publicationname) %>% count()` journals in the Science Direct database.
+
+# Variable transformation
+
+```{r}
+used <-
+  used %>% 
+  rename(surname = LastName,
+         email = Email)
+```
+
+# Filtering the email addresses
+## Drop empty email address cells
+
+```{r}
+email <- 
+  email %>% 
+  filter(!is.na(email))
+```
+
+## Drop empty last name cells
+
+```{r}
+email <- 
+  email %>% 
+  filter(!is.na(surname))
+```
+
+## Drop duplicate email addresses
+
+```{r}
+email <- 
+  email %>% 
+  distinct(email, .keep_all = T)
+```
+
+## Exrtacting parenthases from the email addresses
+
+```{r}
+email <- 
+  email %>% 
+  mutate(email = str_to_lower(email),
+         email = str_remove_all(email, "\\(|\\)"))
+```
+
+## Checking valid email addresses
+
+```{r}
+email <- 
+  email %>% 
+  mutate(email_valid = str_detect(email, "([_+a-z0-9-]+(\\.[_+a-z0-9-]+)*@[a-z0-9-]+(\\.[a-z0-9-]+)*(\\.[a-z]{2,14}))"))
+```
+
+There are `r email %>% filter(email_valid == TRUE) %>% count()` valid email addresses.
+
+## Keep only valid email addresses
+
+```{r}
+email <- 
+  email %>% 
+  filter(email_valid == TRUE)
+```
+
+There are `r email %>% count()` email addresses left.
+
+## Delete used email addresses from the list
+
+Comparing the two list. In some cases there can be an inconsistency as the email addresses in the other study were complemented by hand.
+
+```{r}
+used_additional <-
+  used %>% 
+  anti_join(., email, by = c("surname", "email"))
+```
+
+Deleting used addresses.
+
+```{r}
+email <-
+  email %>% 
+  anti_join(., used, by = c("surname", "email"))
+```
+
+There are `r email %>% count()` email addresses left.
+
+```{r}
+email <-
+  email %>% 
+  anti_join(., batch_1, by = c("surname", "email"))
+```
+
+```{r}
+email <-
+  email %>% 
+  anti_join(., batch_2, by = c("surname", "email"))
+```
+
+# Choose only needed variables
+
+```{r}
+email <-
+  email %>% 
+  select(surname,
+         email)
+```
+
+# Make a random selection of emails
+
+```{r}
+# First batch selection
+first_batch <-
+  email %>% 
+  sample_n(500) 
+```
+
+```{r}
+# Second batch selection
+second_batch <-
+  email %>% 
+  sample_n(2500) 
+```
+
+```{r}
+# Third batch selection
+third_batch <-
+  email %>% 
+  sample_n(10000) 
+```
+
+# Save random selection of emails
+
+```{r}
+## First batch selection
+write_xlsx(first_batch, "Data/Sample/HomeOffice_Sample_Batch_1.xlsx")
+
+## Second batch selection
+write_xlsx(second_batch, "Data/Sample/HomeOffice_Sample_Batch_2.xlsx")
+
+## Second batch selection
+write_xlsx(third_batch, "Data/Sample/HomeOffice_Sample_Batch_3.xlsx")
+```

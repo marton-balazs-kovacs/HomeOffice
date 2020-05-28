@@ -1,0 +1,53 @@
+---
+title: "HomeOffice_Pilot_Analysis"
+author: "Marton Kovacs"
+output: html_document
+---
+
+# Load pacakges
+
+```{r}
+library(tidyverse)
+```
+
+# Import data
+
+```{r}
+processed <- read_tsv("Data/Pilot/Processed/HomeOffice_Pilot_Processed_data.tsv")
+```
+
+# How much are you working from home now?
+
+```{r}
+processed %>% 
+  ggplot() +
+  aes(x = work_home_prop_now_1) +
+  geom_histogram() +
+  scale_y_continuous() +
+  labs(x = "How much are you working from home now?") +
+  theme_minimal()
+```
+
+# How much did you work from home?
+
+```{r}
+processed %>% 
+  filter(!is.na(work_home_prop_prior_1))  %>% 
+  ggplot() +
+  aes(x = work_home_prop_prior_1) +
+  geom_histogram() +
+  scale_y_continuous() +
+  labs(x = "How much did you work from home before the pandemic?") +
+  theme_minimal()
+```
+
+# Home schooling
+
+```{r}
+processed %>% 
+  ggplot() +
+  aes(x = home_school) +
+  geom_bar() +
+  labs(x = "Are you home schooling?") +
+  theme_minimal()
+```
