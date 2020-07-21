@@ -24,6 +24,32 @@ raw <- read_tsv("Data/Main/Raw/HomeOffice_Main_Raw_data.tsv")
 survey_structure <- read_json("HomeOffice_Main.qsf")
 ```
 
+This code was written by Tamas Nagy.
+
+```{r}
+survey_structure_cleaned <-
+  tibble(q = survey_structure$SurveyElements) %>% 
+  hoist(q, 
+        qid = c("Payload", "DataExportTag"),
+        question_text = c("Payload", "QuestionText"),
+        answer = c("Payload", "Choices")) %>% 
+  unnest_longer(answer) %>% 
+  hoist(answer, answer_label = "Display") %>% 
+  drop_na(qid) %>% 
+  mutate(question_text = str_remove_all(question_text, "<[^>]*>")) %>%
+  select(-q, -answer, answer_value = answer_id) %>%
+  arrange(qid) %>% 
+  filter(qid != "Q3")
+```
+
+# Rename variables
+
+```{r}
+raw <- 
+  raw %>% 
+  janitor::clean_names()
+```
+
 # Save Qualtrics labels separately
 
 ```{r}
@@ -43,15 +69,7 @@ raw <-
 ```{r}
 raw <- 
   raw %>% 
-  rename(participant_id = ResponseId)
-```
-
-# Rename variables
-
-```{r}
-raw <- 
-  raw %>% 
-  janitor::clean_names()
+  rename(participant_id = response_id)
 ```
 
 # Drop trial responses
@@ -64,6 +82,8 @@ raw <-
 
 # Drop not completed 
 
+The distinct values of survey progress are `r raw %>% count(progress)`.
+
 ```{r}
 raw <- 
   raw %>% 
@@ -71,22 +91,7 @@ raw <-
   filter(progress == 100)
 ```
 
-# Median time of responding to the survey
-
-```{r}
-raw %>% 
-  mutate(duration_in_seconds = as.integer(duration_in_seconds)) %>% 
-  summarise(median_resp = median(duration_in_seconds) / 60)
-```
-
-# Responde date range
-
-```{r}
-raw %>% 
-  mutate(recorded_date = lubridate::as_datetime(recorded_date)) %>% 
-  summarise(min_date = min(recorded_date),
-            max_date = max(recorded_date))
-```
+There are `r nrow(raw)` response left after excluding the non finished responses.
 
 # Distributon of responses from different sources
 
@@ -96,23 +101,25 @@ raw %>%
   count()
 ```
 
-# Merge free text responses with other responses for the same column
+# Deal with free text responses
+
+Based on agreement amng MK. and BA. where respondents provided free text responses we will use the "Other" label in tha analysis. Detailed responses will be available in the openly shared dataset. 
 
 ```{r}
 raw <- 
   raw %>% 
-  mutate(area_of_research = case_when(area_of_research == "Other:" ~ area_of_research_6_text,
+  mutate(area_of_research = case_when(area_of_research == "Other:" ~ "Other",
                                       TRUE ~ area_of_research),
-         living_sit = case_when(living_sit == "Other:" ~ living_sit_7_text,
+         living_sit = case_when(living_sit == "Other:" ~ "Other",
                                       TRUE ~ living_sit),
-         need_from_org_11 = case_when(need_from_org_11 == "Other:" ~ need_from_org_11_text,
+         need_from_org_11 = case_when(need_from_org_11 == "Other:" ~ "Other",
                                       TRUE ~ need_from_org_11))
 ```
 
 # Create two variables for the number of children and for their age
 
 ```{r}
-no_children <- 
+no_children_by_age <- 
   raw %>%
   select(participant_id, contains("children")) %>% 
   gather(key = "age_range", value = "no", -participant_id) %>% 
@@ -122,14 +129,30 @@ no_children <-
                                age_range == "children_25" ~ "7-12",
                                age_range == "children_26" ~ "13-18",
                                age_range == "children_27" ~ "18<"),
-         no= as.integer(no),
-         no = replace_na(no, 0L)) %>% 
+         no = as.integer(no),
+         no = replace_na(no, 0L))
+
+no_children <-
+  no_children_by_age %>% 
   group_by(participant_id) %>% 
   summarise(number_of_children = sum(no))
 
 raw <- 
   raw %>%
   left_join(., no_children, by = "participant_id")
+```
+
+# Calculate the difference between the percentage of working from home now and the ideal
+
+```{r}
+raw <- 
+  raw %>% 
+  mutate_at(vars(future_home_prop_1, prior_home_prop_1),
+            as.integer)
+
+raw <- 
+  raw %>% 
+  mutate(future_prior_diff = future_home_prop_1 - prior_home_prop_1)
 ```
 
 # Drop not needed variables
@@ -143,8 +166,6 @@ raw <-
          -status,
          -progress,
          -finished,
-         -recorded_date,
-         -duration_in_seconds,
          -user_language,
          -area_of_research_6_text,
          -living_sit_7_text,

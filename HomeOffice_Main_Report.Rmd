@@ -1,0 +1,469 @@
+---
+title: "Researchers working from home"
+runtime: shiny
+output:
+    rmdformats::readthedown:
+    highlight: kate
+---
+
+```{css, echo = FALSE}
+#sidebar {
+  background: #A9A9A9;
+}
+
+#sidebar a {
+  color: #000000;
+}
+
+#sidebar a:hover {
+  background-color: #828282;
+}
+
+#postamble {
+  background-color: #828282;
+  border-top: #828282;
+}
+```
+
+```{r setup, echo = FALSE, cache = FALSE, warning = FALSE, message = FALSE}
+# Load packages
+library(knitr)
+library(rmdformats)
+library(tidyverse)
+library(shiny)
+
+# Global options
+options(max.print="75")
+opts_chunk$set(echo = FALSE,
+	             cache = TRUE,
+               prompt = FALSE,
+               tidy = TRUE,
+               comment = NA,
+               message = FALSE,
+               warning = FALSE)
+opts_knit$set(width = 100)
+
+# Custom ggplot theme
+custom_theme <- function() {
+  theme_minimal() %+replace%
+    theme(
+      plot.background = element_rect(fill = "#fcfcfc", colour = NA),
+      panel.background = element_blank(),
+      axis.title.y = element_text(size = 15, margin = margin(t = 0, r = 10, b = 0, l = 0), angle = 90),
+      axis.title.x = element_text(size = 15, margin = margin(t = 10, r = 0, b = 0, l = 0)),
+      axis.text = element_text(size = 10),
+      strip.text.x = element_text(size = 15)
+      )
+}
+
+# Import custom funcions
+source("R/subset_plot_data.R")
+source("R/round_any.R")
+```
+
+```{r load data, echo = FALSE, cache = FALSE, warning = FALSE, message = FALSE}
+# Create folder structure for the data
+# Uncomment the following lines to create the folder structure
+# source("R/create_data_structure.R")
+# create_data_structure("Data")
+
+# Load data
+uni_data <- read_tsv("Data/Main/Processed/HomeOffice_Main_Processed_data.tsv")
+
+# Transform data
+uni_data <- 
+  uni_data %>% 
+  mutate(uni = case_when(uni == "elteppk" ~ "ELTE University PPK",
+                         TRUE ~ uni))
+```
+
+```{r}
+# Available uni choice options
+uni_choices <- 
+  uni_data %>% 
+  distinct(uni) %>% 
+  drop_na() %>% 
+  pull(uni)
+
+# Select filter
+shiny::selectInput("uni", "Choose an institution:",
+            choices = c(uni_choices, "All data"),
+            selected = "All data",
+            width = '300px')
+
+# Filter data
+filtered_data <- eventReactive(input$uni, {
+  if (input$uni != "All data") {
+    uni_data %>% 
+      filter(uni == input$uni)
+    } else {
+      uni_data
+      }
+  })
+```
+
+
+
+```{r summary, cache = FALSE}
+renderText({
+  paste("Data from", count(filtered_data()), "researchers are included in the present report. Out of them,", filter(filtered_data(), working_home_time == "Yes") %>% count(), "have been working more from home during the lockdown compared to the time before.")
+})
+```
+
+# How efficient they are at doing research from home
+
+# During the lockdown
+
+```{r eff during, cache = FALSE}
+renderPlot({
+  eff_during_plot_data <-
+    filtered_data() %>%
+    filter(!is.na(now_before_eff)) %>%
+    mutate(now_before_eff = forcats::fct_relevel(now_before_eff, c("less efficient", "similarly efficient","more efficient"))) %>%
+    count(now_before_eff) %>%
+    mutate(N = sum(n),
+           percent = n / N)
+
+  y_max_during <- round_any(max(eff_during_plot_data$percent), 0.1, f = ceiling)
+
+  eff_during_plot_data %>%
+    ggplot() +
+    aes(x = now_before_eff,
+        y = percent) +
+    geom_bar(stat = "identity", fill = "#a02043") +
+    scale_y_continuous(expand = c(0, 0),
+                       labels = scales::percent_format(accuracy = 10L),
+                       limits = c(0, y_max_during)) +
+    labs(x = "Change in the efficiency of the research work",
+         y = "Percentage of responses") +
+    custom_theme()
+  }, height = 500, width = 800, res = 100)
+```
+
+# Expected efficiency after the lockdown - if working more from home
+
+```{r eff after, cache = FALSE}
+renderPlot({
+  eff_after_plot_data <-
+    filtered_data() %>%
+    mutate(now_later_eff = forcats::fct_relevel(now_later_eff, c("less efficient", "similarly efficient", "more efficient"))) %>%
+    count(now_later_eff) %>%
+    mutate(N = sum(n),
+           percent = n / N)
+
+  y_max_after <- round_any(max(eff_after_plot_data$percent), 0.1, f = ceiling)
+
+  eff_after_plot_data %>%
+    ggplot() +
+    aes(x = now_later_eff,
+        y = percent) +
+    geom_bar(stat = "identity", fill = "#a02043") +
+    scale_y_continuous(expand = c(0, 0),
+                       labels = scales::percent_format(accuracy = 10L),
+                       limits = c(0, y_max_after)) +
+    labs(x = "Change in the efficiency of the research work",
+         y = "Percentages of responses") +
+    custom_theme()
+  }, height = 500, width = 800, res = 100)
+```
+
+***
+
+# What is more efficient at home and in the office?
+
+```{r aspect summary, cache = FALSE}
+aspect_plot_data <- reactive({
+  filtered_data() %>%
+    select(participant_id, contains("home_office_aspect")) %>%
+    gather(key = "aspect", value = "rating", -participant_id) %>% 
+    mutate(aspect = case_when(aspect == "home_office_aspect_1" ~ "Optimally organizing my time",
+                              aspect == "home_office_aspect_2" ~ "Optimally organizing my tasks",
+                              aspect == "home_office_aspect_3" ~ "Keeping focused on my tasks",
+                              aspect == "home_office_aspect_4" ~ "Keeping in touch with my team",
+                              aspect == "home_office_aspect_5" ~ "Sharing thoughts with colleagues",
+                              aspect == "home_office_aspect_6" ~ "Getting support from colleagues",
+                              aspect == "home_office_aspect_7" ~ "Working on my manuscript",
+                              aspect == "home_office_aspect_8" ~ "Analyzing my data",
+                              aspect == "home_office_aspect_9" ~ "Reading the literature",
+                              aspect == "home_office_aspect_10" ~ "Collecting data",
+                              aspect == "home_office_aspect_11" ~ "Having the infrastructure\n(IT, books, instruments)",
+                              aspect == "home_office_aspect_12" ~ "Maintaining emotional balance",
+                              aspect == "home_office_aspect_13" ~ "Maintaining work-life balance",
+                              aspect == "home_office_aspect_14" ~ "Keeping good relationship\nwith colleagues",
+                              aspect == "home_office_aspect_15" ~ "Developing new skills"))
+  })
+
+renderPlot({
+  aspect_plot_data() %>%
+    group_by(aspect) %>%
+    summarize(median = median(rating),
+              mean = mean(rating)) %>% 
+    ggplot() +
+    aes(x = fct_reorder(aspect, mean),
+        y = mean) +
+    geom_bar(stat = "identity", fill = "#a02043") +
+    scale_y_continuous(
+      expand = c(0, 0.4),
+      breaks = c(1, 2, 3, 4, 5, 6, 7),
+      labels = c("1\nAt home", "2", "3", "4", "5", "6", "7\nIn the office")) +
+    coord_flip(ylim = c(1, 7)) +
+    geom_hline(yintercept = 4, linetype = "dashed", color = "#828282", size = 1) +
+    labs(x = "Aspects",
+         y = "Mean rating") +
+    custom_theme()
+  }, height = 500, width = 800, res = 100)
+```
+
+You can see the distribution of the ratings for each aspect.
+
+```{r aspect input}
+aspect_choices <- c("Optimally organizing my time",
+                    "Optimally organizing my tasks",
+                    "Keeping focused on my tasks",
+                    "Keeping in touch with my team",
+                    "Sharing thoughts with colleagues",
+                    "Getting support from colleagues",
+                    "Working on my manuscript",
+                    "Analyzing my data",
+                    "Reading the literature",
+                    "Collecting data",
+                    "Having the infrastructure\n(IT, books, instruments)",
+                    "Maintaining emotional balance",
+                    "Maintaining work-life balance",
+                    "Keeping good relationship\nwith colleagues",
+                    "Developing new skills")
+
+shiny::selectInput("aspect", "Choose an aspect:",
+            choices = aspect_choices,
+            width = '300px')
+```
+
+```{r aspect individual, cache = FALSE}
+renderPlot({
+  aspect_individual_plot_data <-
+  aspect_plot_data() %>%
+  mutate(rating = as_factor(rating)) %>%
+  group_by(aspect) %>%
+  count(rating, .drop = FALSE)
+
+y_max_aspect <- round_any(max(aspect_individual_plot_data$n), 2, f = ceiling)
+
+  aspect_individual_plot_data %>%
+    filter(aspect == input$aspect) %>%
+    ggplot() +
+    aes(x = rating,
+        y = n) +
+    geom_bar(stat = "identity", fill = "#a02043") +
+    scale_y_continuous(
+      expand = c(0, 0),
+      limits = c(0, y_max_aspect)) +
+    scale_x_discrete(
+      breaks = c(1, 2, 3, 4, 5, 6, 7),
+      labels = c("1\nAt home", "2", "3", "4", "5", "6", "7\nIn the office")) +
+    labs(x = "Rating",
+         y = "Count") +
+    custom_theme()
+}, height = 500, width = 800, res = 100)
+```
+
+***
+
+# What proportion of the worktime they used to (red) and would be ideal to (grey) work from home?
+
+```{r feasible input}
+shiny::selectInput("feasible", "Is it feasible to work the ideal time from home?",
+            choices = c("All responses",
+                        "Yes",
+                        "No"),
+            width = "400px")
+```
+
+```{r percentage plot, cache = FALSE}
+renderPlot({
+  percentage_plot_data <-
+    filtered_data() %>%
+    select(participant_id,
+           prior_home_prop_1,
+           future_home_prop_1,
+           feasible) %>%
+    gather(key = "time", value = "percent", -participant_id, -feasible) %>%
+    mutate(time = case_when(time == "prior_home_prop_1" ~ "Prior to pandemic",
+                            time == "future_home_prop_1" ~ "Ideal"),
+           time = factor(time, c("Prior to pandemic", "Ideal")))
+
+  if(input$feasible == "All responses") {
+    percentage_plot_data
+  } else {
+    percentage_plot_data <-
+      percentage_plot_data %>%
+      filter(feasible == input$feasible)
+  }
+
+  percentage_plot_data %>%
+  ggplot() +
+  aes(x = percent,
+      color = time) +
+  geom_density(alpha = 0.6, size = 1) +
+  scale_y_continuous(expand = c(0.01, 0),
+                     breaks = scales::pretty_breaks()) +
+  scale_x_continuous(expand = c(0, 0),
+                     breaks = seq(0, 100, 10),
+                     labels = seq(0, 100, 10)) +
+  scale_fill_manual( values = c('#a02043', '#A9A9A9')) +
+  scale_color_manual(values=c('#a02043', '#A9A9A9'))+
+  labs(x = "Percentage of worktime working from home",
+       y = "Density") +
+  custom_theme() +
+  theme(legend.position = "none")
+}, height = 500, width = 800, res = 100)
+```
+
+***
+
+# What would they need from the institution in order to be more efficient and balanced at working from home?
+
+```{r need input, cache = FALSE}
+renderPlot({
+  need_plot_data <-
+    filtered_data() %>%
+    select(participant_id, contains("need_from_org"), -need_from_org_11) %>%
+    gather(key = "key", value = "need", -participant_id, na.rm = TRUE) %>%
+    mutate(need = case_when(need == "Support for problems regarding combining work with family life" ~ "Support for problems\nregarding combining\nwork with family life",
+                            need == "Administrative flexibility during lockdowns" ~ "Administrative flexibility\nduring lockdowns",
+                            need == "More tips on working from home" ~ "More tips on\nworking from home",
+                            TRUE ~ need)) %>%
+    count(need)
+
+  y_max_need <- round_any(max(need_plot_data$n), 2, f = ceiling)
+
+  need_plot_data %>%
+    ggplot() +
+    aes(x = reorder(need, -n),
+        y = n) +
+    geom_bar(stat = "identity", fill = "#a02043") +
+    scale_y_continuous(
+      limits = c(0, y_max_need),
+      expand = c(0, 0)) +
+    coord_flip() +
+    labs(x = "Needs",
+         y = "Number of responses") +
+    custom_theme()
+  }, height = 500, width = 800, res = 100)
+```
+
+_Note: The figure could contain multiple responses from one respondent._
+
+***
+
+# Seeing subsets of responses for the efficiency of working from home during and after lockdown
+# Gender
+
+```{r gender input}
+shiny::selectInput("gender", "Choose a subset:",
+            choices = c("Female",
+                        "Male"),
+            width = "400px")
+```
+
+```{r gender plot, cache = FALSE}
+renderPlot({
+  subset_gender_plot_data <-
+    subset_plot_data(data = filtered_data(),
+                     filter_var = gender,
+                     output_type = "percent")
+
+  y_max_gender <- round_any(max(subset_gender_plot_data$percent), 0.1, f = ceiling)
+
+  subset_gender_plot_data %>%
+    filter(gender == input$gender) %>%
+    ggplot() +
+    aes(x = rating,
+        y = percent) +
+    geom_bar(stat = "identity", fill = "#a02043") +
+    facet_wrap(. ~ time) +
+    scale_y_continuous(expand = c(0, 0),
+                       limits = c(0, y_max_gender),
+                       labels = scales::percent_format(accuracy = 10L)) +
+    labs(x = "Change in the efficiency of the research work",
+         y = "Percentage") +
+    custom_theme()
+}, height = 500, width = 800, res = 100)
+```
+
+# Living situation
+
+```{r living input, cache = FALSE}
+renderUI({
+living_sit_filter <-
+  filtered_data() %>%
+    count(living_sit) %>%
+    filter(n > 10) %>% 
+    pull(living_sit)
+
+  shiny::selectInput("living_sit", "Choose a subset:",
+                     choices = living_sit_filter,
+                     width = "400px")
+  })
+```
+
+```{r living plot, cache = FALSE}
+renderPlot({
+  subset_living_plot_data <-
+    subset_plot_data(data = filtered_data(),
+                     filter_var = living_sit,
+                     output_type = "percent") %>%
+    filter(N > 10)
+
+  y_max_living <- round_any(max(subset_living_plot_data$percent), 0.1, f = ceiling)
+
+  subset_living_plot_data %>%
+    filter(living_sit == input$living_sit) %>%
+    ggplot() +
+    aes(x = rating,
+        y = percent) +
+    geom_bar(stat = "identity", fill = "#a02043") +
+    facet_wrap(. ~ time) +
+    scale_y_continuous(expand = c(0, 0),
+                       labels = scales::percent_format(accuracy = 10L),
+                       limits = c(0, y_max_living)) +
+    labs(x = "Change in the efficiency of the research work",
+         y = "Percentage") +
+    custom_theme()
+}, height = 500, width = 800, res = 100)
+```
+
+# Homeschool
+
+Subsets of the results based on whether the respondent had to do home-schooling during the present pandemic.
+
+```{r homeschool input}
+shiny::selectInput("homeschool", "Choose a subset:",
+            choices = c("Yes", "No"),
+            width = "400px")
+```
+
+```{r homeschool plot, cache = FALSE}
+renderPlot({
+    subset_homeschool_data <-
+    subset_plot_data(data = filtered_data(),
+                     filter_var = homeschool,
+                     output_type = "percent")
+
+  y_max_homeschool <- round_any(max(subset_homeschool_data$percent), 0.1, f = ceiling)
+
+  subset_homeschool_data %>%
+    filter(homeschool == input$homeschool) %>%
+    ggplot() +
+    aes(x = rating,
+        y = percent) +
+    geom_bar(stat = "identity", fill = "#a02043") +
+    facet_wrap(. ~ time) +
+    scale_y_continuous(expand = c(0, 0),
+                       labels = scales::percent_format(accuracy = 10L),
+                       limits = c(0, y_max_homeschool)) +
+    labs(x = "Change in the efficiency of the research work",
+         y = "Percentage") +
+    custom_theme()
+}, height = 500, width = 800, res = 100)
+```
+

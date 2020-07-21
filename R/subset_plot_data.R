@@ -6,7 +6,7 @@ subset_plot_data <- function(data, filter_var, output_type = c("percent", "count
     mutate(time = case_when(time == "now_before_eff" ~ "During the pandemic",
                             time == "now_later_eff" ~ "After the pandemic")) %>% 
     filter(!(time == "During the pandemic" & is.na(rating))) %>% 
-    mutate(rating = forcats::fct_relevel(rating, c("less efficient", "similarly efficient","more efficient")),
+    mutate(rating = forcats::fct_relevel(rating, c("less efficient", "similarly efficient", "more efficient")),
            time = forcats::fct_relevel(time, c("During the pandemic", "After the pandemic"))) %>% 
     group_by(time, {{filter_var}}) %>% 
     count(rating, .drop = FALSE) %>% 

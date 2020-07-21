@@ -1,0 +1,425 @@
+---
+title: "HomeOffice_Main_Analysis"
+author: "Marton Kovacs"
+date: '`r format(Sys.time(), "%d %B, %Y")`'
+output: html_document
+---
+
+# Install packages
+
+```{r, message = FALSE, warning = FALSE}
+library(tidyverse)
+```
+
+# Source R scripts
+
+```{r}
+r_scripts <- list.files("R/", full.names = TRUE)
+walk(r_scripts, source)
+```
+
+# Importing data
+
+```{r}
+processed <- read_tsv("Data/Main/Processed/HomeOffice_Main_Processed_data.tsv")
+```
+
+# Descriptives
+## Number of respondents
+
+There are `r nrow(processed)` individual responses used for the analysis.
+
+## Median time of responding to the survey
+
+```{r}
+processed %>% 
+  mutate(duration_in_seconds = as.integer(duration_in_seconds)) %>% 
+  summarise(median_resp = median(duration_in_seconds) / 60)
+```
+
+## Response date range
+
+```{r}
+processed %>% 
+  mutate(recorded_date = lubridate::as_datetime(recorded_date)) %>% 
+  summarise(min_date = min(recorded_date),
+            max_date = max(recorded_date))
+```
+
+## Gender distribution
+
+```{r}
+count(processed, gender)
+apa_barplot(processed, gender)
+```
+
+## Disciplines
+
+```{r}
+count(processed, area_of_research)
+apa_barplot(processed, area_of_research)
+```
+
+## Position
+
+```{r}
+count(processed, position)
+apa_barplot(processed, position)
+```
+
+## Type of workplace
+
+```{r}
+count(processed, wokrplace_type)
+apa_barplot(processed, wokrplace_type)
+```
+
+## Is it possible to collect data remotely
+
+```{r}
+count(processed, data_coll_remote)
+apa_barplot(processed, data_coll_remote)
+```
+
+## Age group
+
+```{r}
+count(processed, age)
+apa_barplot(processed, age)
+```
+
+## Educational duties at work
+
+
+```{r}
+count(processed, edu_duties)
+apa_barplot(processed, edu_duties)
+```
+
+## Reasearch require intenvise teamwork
+
+```{r}
+count(processed, team_work)
+apa_barplot(processed, team_work)
+```
+
+## Office setup at home
+
+```{r}
+count(processed, office_setup)
+apa_barplot(processed, office_setup)
+```
+
+## Living situation
+
+```{r}
+count(processed, living_sit)
+apa_barplot(processed, living_sit) +
+  coord_flip()
+```
+
+## Partner working from home during the pandemic
+
+```{r}
+count(processed, partner_work)
+apa_barplot(processed, partner_work)
+```
+
+## How far is the office from home
+
+```{r}
+count(processed, work_home_dist)
+apa_barplot(processed, work_home_dist)
+```
+
+## Number of children
+
+```{r}
+count(processed, number_of_children)
+apa_barplot(processed, number_of_children)
+```
+
+## Homeschooling during pandemic
+
+```{r}
+count(processed, homeschool)
+apa_barplot(processed, homeschool)
+```
+
+## Help with children during pandemic
+
+```{r}
+count(processed, childcare_help)
+apa_barplot(processed, childcare_help)
+```
+
+# Percentage of working more from home during the pandemic
+
+```{r}
+count(processed, working_home_time)
+```
+
+`r filter(processed, working_home_time == "Yes") %>% count()`% of the surveyed researchers worked more from home during the pandemic lockdown.
+
+# Efficiency of remore working
+## During the lockdown
+
+```{r}
+processed %>% 
+  distinct(now_before_eff)
+
+now_before_eff <-
+  processed %>% 
+  filter(!is.na(now_before_eff)) %>% 
+  count(now_before_eff) %>% 
+  mutate(N = sum(n),
+         prop = round(n / N * 100, 2))
+```
+
+`r filter(now_before_eff, now_before_eff == "less efficient")`% of the surveyed scientists who worked more from home during the coronavirus lockdown found that due to working more from home their research became, in general, less efficient, `r filter(now_before_eff, now_before_eff == "more efficient")`% found it more efficient, and `r filter(now_before_eff, now_before_eff == "similarly efficient")`% found no difference compared to working before the lockdown. (only from those working from home).
+
+## After the lockdown
+
+```{r}
+processed %>% 
+  distinct(now_later_eff)
+
+now_later_eff <-
+  processed %>% 
+  filter(!is.na(now_later_eff)) %>%
+  count(now_later_eff) %>% 
+  mutate(N = sum(n),
+         prop = n / N * 100)
+```
+
+`r filter(now_later_eff, now_later_eff == "less efficient")`% of the surveyed scientists assume that working more from home after the coronavirus lockdown could make their research, in general, less efficient, `r filter(now_later_eff, now_later_eff == "more efficient")`% found it more efficient, and `r filter(now_later_eff, now_later_eff == "similarly efficient")`% found no difference compared to the time before the lockdown. (excluding 100% home workers).
+
+## Main advantages of working from home
+
+We calculate the means and SDs of each aspects ratings. Aspects with higher rating than 4 indicates that it is better to do the task from the lab. Ratings with lower mean rating than 4 means that it is better to do the given action from home.
+
+```{r}
+aspects <- 
+    processed %>%
+    select(participant_id, contains("home_office_aspect")) %>%
+    gather(key = "aspect", value = "rating", -participant_id) %>% 
+    mutate(aspect = case_when(aspect == "home_office_aspect_1" ~ "Optimally organizing my time",
+                              aspect == "home_office_aspect_2" ~ "Optimally organizing my tasks",
+                              aspect == "home_office_aspect_3" ~ "Keeping focused on my tasks",
+                              aspect == "home_office_aspect_4" ~ "Keeping in touch with my team",
+                              aspect == "home_office_aspect_5" ~ "Sharing thoughts with colleagues",
+                              aspect == "home_office_aspect_6" ~ "Getting support from colleagues",
+                              aspect == "home_office_aspect_7" ~ "Working on my manuscript",
+                              aspect == "home_office_aspect_8" ~ "Analyzing my data",
+                              aspect == "home_office_aspect_9" ~ "Reading the literature",
+                              aspect == "home_office_aspect_10" ~ "Collecting data",
+                              aspect == "home_office_aspect_11" ~ "Having the infrastructure\n(IT, books, instruments)",
+                              aspect == "home_office_aspect_12" ~ "Maintaining emotional balance",
+                              aspect == "home_office_aspect_13" ~ "Maintaining work-life balance",
+                              aspect == "home_office_aspect_14" ~ "Keeping good relationship\nwith colleagues",
+                              aspect == "home_office_aspect_15" ~ "Developing new skills")) %>% 
+  group_by(aspect) %>% 
+  summarise(mean = mean(rating, na.rm = TRUE),
+            sd = sd(rating, na.rm = TRUE)) %>% 
+  mutate(better_home = case_when(mean > 4 ~ 0L,
+                                 mean < 4 ~ 1L,
+                                 mean == 4 ~ NA_integer_)) %>% 
+  arrange(better_home, mean)
+```
+
+The three lowest-rated advantages of working from home
+
+```{r}
+aspects %>% 
+  filter(better_home == 1L) %>% 
+  slice_min(mean, n = 3)
+```
+
+## Main advantages of working in the lab
+
+The three highest-rated advantages of working from the lab
+
+```{r}
+aspects %>% 
+  filter(better_home == 0L) %>% 
+  slice_max(mean, n = 3)
+```
+
+
+## How much did researchers work from home before the pandemic?
+
+The distribution of percentages of working from your home time before the pandemic.
+
+```{r}
+percentage_plot_data <-
+    processed %>%
+    select(participant_id,
+           prior_home_prop_1,
+           future_home_prop_1) %>%
+    gather(key = "time", value = "percent", -participant_id) %>%
+    mutate(time = case_when(time == "prior_home_prop_1" ~ "Prior to pandemic",
+                            time == "future_home_prop_1" ~ "Ideal"),
+           time = factor(time, c("Prior to pandemic", "Ideal")))
+
+percentage_plot_data %>%
+  filter(time == "Prior to pandemic") %>% 
+  ggplot() +
+  aes(x = percent) +
+  geom_density(alpha = 0.6, size = 0.8) +
+  scale_y_continuous(expand = c(0.01, 0),
+                     breaks = scales::pretty_breaks()) +
+  scale_x_continuous(expand = c(0, 0),
+                     breaks = seq(0, 100, 10),
+                     labels = seq(0, 100, 10)) +
+  labs(x = "Percentage of worktime working from home prior to pandemic",
+       y = "Density") +
+  papaja::theme_apa()
+```
+
+## How much would researchers work from home after the pandemic?
+
+The distribution of percentages of ideal working from home time after the pandemic.
+
+```{r}
+percentage_plot_data %>%
+  filter(time == "Ideal") %>% 
+  ggplot() +
+  aes(x = percent) +
+  geom_density(alpha = 0.6, size = 0.8) +
+  scale_y_continuous(expand = c(0.01, 0),
+                     breaks = scales::pretty_breaks()) +
+  scale_x_continuous(expand = c(0, 0),
+                     breaks = seq(0, 100, 10),
+                     labels = seq(0, 100, 10)) +
+  labs(x = "Percentage of worktime working from home",
+       y = "Density") +
+  papaja::theme_apa()
+```
+
+Prior and ideal percentages of working from home on the smae figure.
+
+```{r}
+percentage_plot_data %>%
+  ggplot() +
+  aes(x = percent,
+      color = time) +
+  geom_density(alpha = 0.6, size = 0.8) +
+  scale_y_continuous(expand = c(0.01, 0),
+                     breaks = scales::pretty_breaks()) +
+  scale_x_continuous(expand = c(0, 0),
+                     breaks = seq(0, 100, 10),
+                     labels = seq(0, 100, 10)) +
+  scale_fill_manual(values = c('#000000', '#D3D3D3')) +
+  scale_color_manual(values=c('#000000', '#D3D3D3'))+
+  labs(x = "Percentage of worktime working from home",
+       y = "Density",
+       color = "Time") +
+  papaja::theme_apa()
+```
+
+## Would it be possible to work more from home in the future?
+
+See the distinct values of the difference between the ideal percentage of working more from the future and the prior percentage. If the difference is negative the respondent wants to work less from home in the future, if it is positive the respondents wants to work more from home in the future.
+
+```{r}
+processed %>% 
+  distinct(future_prior_diff) %>% 
+  arrange(future_prior_diff)
+```
+
+Showing a descriptive comparison.
+
+```{r}
+processed %>% 
+  mutate(more_from_home = case_when(future_prior_diff > 0 ~ "Respondent wants to work more from home",
+                                    future_prior_diff < 0 ~ "Respondent wants to work less from home",
+                                    future_prior_diff == 0 ~ "Respondent working the ideal amount of time from home")) %>% 
+  count(more_from_home) %>%
+  mutate(N = sum(n),
+         prop = n / N * 100) %>% 
+  arrange(n)
+```
+
+Number of respondents who worked 100% from home before the pandemic.
+
+```{r}
+processed %>% 
+  filter(prior_home_prop_1 == 100) %>% 
+  count()
+```
+
+Taken all their other duties (education, administration, etc.) and provided circumstances at home (infrastructure, level of disturbance) of researchers think that it would be possible to work more from home in the future. (excluding 100% home workers, including only wishing to work more from home, OF those who find working from home more efficient)
+
+```{r}
+processed %>% 
+  filter(prior_home_prop_1 != 100,
+         future_prior_diff > 0,
+         now_later_eff == "more efficient") %>% 
+  count(feasible) %>% 
+  mutate(N = sum(n),
+         prop = n / N * 100)
+```
+
+## Additional analyses
+
+Additional descriptive results will be provided for the interested subgroups. Our interested subgroups will be primarily those relevant to the following questions: 
+
+### Are people living with children more or less efficient when working from home?
+
+```{r}
+processed %>% distinct(living_sit)
+
+living_sit_include <- c("Living with partner and non-adult child(ren)", "Single-parent with non-adult child(ren)")
+```
+
+Number of kids in this subsample.
+
+```{r}
+processed %>% 
+  filter(living_sit %in% living_sit_include) %>% 
+  select(number_of_children) %>% 
+  arrange(number_of_children)
+```
+
+```{r}
+processed %>% 
+  filter(living_sit %in% living_sit_include,
+         !is.na(now_before_eff)) %>% 
+  count(now_before_eff) %>% 
+  mutate(N = sum(n),
+         prop = round(n / N * 100, 2))
+```
+
+### What circumstances make a researcher with children more or less efficient in working from home during and after the lockdown?
+
+We need to talk about this.
+
+### Which subgroup would benefit the most/less from working more from home? [interested factors: seniority, data collection method]
+
+We need to talk about this.
+
+### Would it be ideal and possible for those with teaching duties to work proportionally more from home in the future than before the pandemic?
+
+Would it be possible?
+
+```{r}
+processed %>% 
+  filter(edu_duties == "Yes") %>% 
+  count(feasible) %>% 
+  mutate(N = sum(n),
+         prop = round(n / N * 100, 2))
+```
+
+Would it be ideal?
+
+```{r}
+processed %>% 
+  filter(edu_duties == "Yes") %>% 
+  mutate(more_from_home = case_when(future_prior_diff > 0 ~ "Respondent wants to work more from home",
+                                    future_prior_diff < 0 ~ "Respondent wants to work less from home",
+                                    future_prior_diff == 0 ~ "Respondent working the ideal amount of time from home")) %>% 
+  count(more_from_home) %>%
+  mutate(N = sum(n),
+         prop = n / N * 100)
+```
+
