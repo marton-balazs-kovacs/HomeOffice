@@ -96,7 +96,7 @@ count(processed, edu_duties)
 apa_barplot(processed, edu_duties)
 ```
 
-## Reasearch require intenvise teamwork
+## Reasearch require intensive teamwork
 
 ```{r}
 count(processed, team_work)
@@ -392,11 +392,41 @@ processed %>%
 
 ### What circumstances make a researcher with children more or less efficient in working from home during and after the lockdown?
 
-We need to talk about this.
+```{r}
+# Variables that we will use to create the subgroups
+subgroups <- c("position", "area_of_research", "wokrplace_type", "data_coll_remote", "gender", "age", "edu_duties", "team_work", "partner_work")
+
+# Subset of data: respondents living with kids
+with_child <-
+  processed %>% 
+  filter(living_sit %in% living_sit_include,
+         !is.na(now_before_eff),
+         !is.na(now_later_eff))
+
+# Create dataframe for storing results
+res <-
+  tibble(
+    subgroups = subgroups
+  )
+
+# Create function to count the number of respondents on each level of the subgroup
+# and exclude levels where the level has less than 30 respondent in it
+# What to do with subgroups where only one level remains?
+filter_subgroup_levels <- function(subgroup_name) {
+  subgroup_var <- sym(subgroup_name)
+  with_child %>%
+    count(!!subgroup_var) %>% 
+    filter(n > 30)
+}
+
+res <-
+  res %>% 
+  mutate(levels = purrr::map(subgroups, filter_subgroup_levels))
+```
 
 ### Which subgroup would benefit the most/less from working more from home? [interested factors: seniority, data collection method]
 
-We need to talk about this.
+We need to talk about this. We decide this later when we see the other results.
 
 ### Would it be ideal and possible for those with teaching duties to work proportionally more from home in the future than before the pandemic?
 
