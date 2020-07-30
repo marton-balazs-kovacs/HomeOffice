@@ -20,7 +20,7 @@ walk(r_scripts, source)
 
 # Importing data
 
-```{r}
+```{r, message = FALSE}
 processed <- read_tsv("Data/Main/Processed/HomeOffice_Main_Processed_data.tsv")
 ```
 
@@ -37,54 +37,48 @@ processed %>%
   summarise(median_resp = median(duration_in_seconds) / 60)
 ```
 
-## Response date range
-
-```{r}
-processed %>% 
-  mutate(recorded_date = lubridate::as_datetime(recorded_date)) %>% 
-  summarise(min_date = min(recorded_date),
-            max_date = max(recorded_date))
-```
-
 ## Gender distribution
 
 ```{r}
-count(processed, gender)
+percent_by_group(processed, gender)
 apa_barplot(processed, gender)
 ```
 
 ## Disciplines
 
 ```{r}
-count(processed, area_of_research)
-apa_barplot(processed, area_of_research)
+percent_by_group(processed, area_of_research)
+apa_barplot(processed, area_of_research) +
+  coord_flip()
 ```
 
 ## Position
 
 ```{r}
-count(processed, position)
-apa_barplot(processed, position)
+percent_by_group(processed, position)
+apa_barplot(processed, position) +
+  coord_flip()
 ```
 
 ## Type of workplace
 
 ```{r}
-count(processed, wokrplace_type)
-apa_barplot(processed, wokrplace_type)
+percent_by_group(processed, wokrplace_type)
+apa_barplot(processed, wokrplace_type) +
+  coord_flip()
 ```
 
 ## Is it possible to collect data remotely
 
 ```{r}
-count(processed, data_coll_remote)
+percent_by_group(processed, data_coll_remote)
 apa_barplot(processed, data_coll_remote)
 ```
 
 ## Age group
 
 ```{r}
-count(processed, age)
+percent_by_group(processed, age)
 apa_barplot(processed, age)
 ```
 
@@ -92,28 +86,28 @@ apa_barplot(processed, age)
 
 
 ```{r}
-count(processed, edu_duties)
+percent_by_group(processed, edu_duties)
 apa_barplot(processed, edu_duties)
 ```
 
-## Reasearch require intenvise teamwork
+## Reasearch require intensive teamwork
 
 ```{r}
-count(processed, team_work)
+percent_by_group(processed, team_work)
 apa_barplot(processed, team_work)
 ```
 
 ## Office setup at home
 
 ```{r}
-count(processed, office_setup)
+percent_by_group(processed, office_setup)
 apa_barplot(processed, office_setup)
 ```
 
 ## Living situation
 
 ```{r}
-count(processed, living_sit)
+percent_by_group(processed, living_sit)
 apa_barplot(processed, living_sit) +
   coord_flip()
 ```
@@ -121,42 +115,42 @@ apa_barplot(processed, living_sit) +
 ## Partner working from home during the pandemic
 
 ```{r}
-count(processed, partner_work)
+percent_by_group(processed, partner_work)
 apa_barplot(processed, partner_work)
 ```
 
 ## How far is the office from home
 
 ```{r}
-count(processed, work_home_dist)
+percent_by_group(processed, work_home_dist)
 apa_barplot(processed, work_home_dist)
 ```
 
 ## Number of children
 
 ```{r}
-count(processed, number_of_children)
+percent_by_group(processed, number_of_children)
 apa_barplot(processed, number_of_children)
 ```
 
 ## Homeschooling during pandemic
 
 ```{r}
-count(processed, homeschool)
+percent_by_group(processed, homeschool)
 apa_barplot(processed, homeschool)
 ```
 
 ## Help with children during pandemic
 
 ```{r}
-count(processed, childcare_help)
+percent_by_group(processed, childcare_help)
 apa_barplot(processed, childcare_help)
 ```
 
 # Percentage of working more from home during the pandemic
 
 ```{r}
-count(processed, working_home_time)
+percent_by_group(processed, working_home_time)
 ```
 
 `r filter(processed, working_home_time == "Yes") %>% count()`% of the surveyed researchers worked more from home during the pandemic lockdown.
@@ -170,13 +164,36 @@ processed %>%
 
 now_before_eff <-
   processed %>% 
-  filter(!is.na(now_before_eff)) %>% 
-  count(now_before_eff) %>% 
-  mutate(N = sum(n),
-         prop = round(n / N * 100, 2))
+  filter(working_home_time == "Yes") %>% 
+  percent_by_group(now_before_eff)
+
+now_before_eff
 ```
 
-`r filter(now_before_eff, now_before_eff == "less efficient")`% of the surveyed scientists who worked more from home during the coronavirus lockdown found that due to working more from home their research became, in general, less efficient, `r filter(now_before_eff, now_before_eff == "more efficient")`% found it more efficient, and `r filter(now_before_eff, now_before_eff == "similarly efficient")`% found no difference compared to working before the lockdown. (only from those working from home).
+The number of trials where the efficiency rating is missing is `r filter(processed, is.na(now_before_eff)) %>% count()`. It is because this question was not shown to those who said that they are not working more from home. 
+
+`r filter(now_before_eff, now_before_eff == "less efficient") %>% pull(prop)`% of the surveyed scientists who worked more from home during the coronavirus lockdown found that due to working more from home their research became, in general, less efficient, `r filter(now_before_eff, now_before_eff == "more efficient") %>% pull(prop)`% found it more efficient, and `r filter(now_before_eff, now_before_eff == "similarly efficient") %>% pull(prop)`% found no difference compared to working before the lockdown. (only from those working from home).
+
+```{r}
+eff_during_plot_data <-
+  processed %>%
+  filter(working_home_time == "Yes") %>%
+  mutate(now_before_eff = forcats::fct_relevel(now_before_eff, c("less efficient", "similarly efficient", "more efficient"))) %>%
+  percent_by_group(now_before_eff)
+
+y_max_during <- round_any(max(eff_during_plot_data$prop), 0.1, f = ceiling)
+
+eff_during_plot_data %>%
+  ggplot() +
+  aes(x = now_before_eff,
+      y = prop) +
+  geom_bar(stat = "identity") +
+  scale_y_continuous(expand = c(0, 0),
+                     limits = c(0, y_max_during)) +
+  labs(x = "Change in the efficiency of the research work",
+        y = "Percentage of responses") +
+  papaja::theme_apa()
+```
 
 ## After the lockdown
 
@@ -186,19 +203,40 @@ processed %>%
 
 now_later_eff <-
   processed %>% 
-  filter(!is.na(now_later_eff)) %>%
-  count(now_later_eff) %>% 
-  mutate(N = sum(n),
-         prop = n / N * 100)
+  filter(prior_home_prop_1 != 100) %>%
+  percent_by_group(now_later_eff)
+
+now_later_eff
 ```
 
-`r filter(now_later_eff, now_later_eff == "less efficient")`% of the surveyed scientists assume that working more from home after the coronavirus lockdown could make their research, in general, less efficient, `r filter(now_later_eff, now_later_eff == "more efficient")`% found it more efficient, and `r filter(now_later_eff, now_later_eff == "similarly efficient")`% found no difference compared to the time before the lockdown. (excluding 100% home workers).
+`r filter(now_later_eff, now_later_eff == "less efficient") %>% pull(prop)`% of the surveyed scientists assume that working more from home after the coronavirus lockdown could make their research, in general, less efficient, `r filter(now_later_eff, now_later_eff == "more efficient") %>% pull(prop)`% found it more efficient, and `r filter(now_later_eff, now_later_eff == "similarly efficient") %>% pull(prop)`% found no difference compared to the time before the lockdown. (excluding 100% home workers).
 
-## Main advantages of working from home
+```{r}
+eff_after_plot_data <-
+  processed %>%
+  filter(prior_home_prop_1 != 100) %>%
+  mutate(now_later_eff = forcats::fct_relevel(now_later_eff, c("less efficient", "similarly efficient", "more efficient"))) %>%
+  percent_by_group(now_later_eff)
+
+y_max_during <- round_any(max(eff_after_plot_data$prop), 0.1, f = ceiling)
+
+eff_after_plot_data %>%
+  ggplot() +
+  aes(x = now_later_eff,
+      y = prop) +
+  geom_bar(stat = "identity") +
+  scale_y_continuous(expand = c(0, 0),
+                     limits = c(0, y_max_during)) +
+  labs(x = "Change in the efficiency of the research work",
+        y = "Percentage of responses") +
+  papaja::theme_apa()
+```
+
+## Investigating aspects of research
 
 We calculate the means and SDs of each aspects ratings. Aspects with higher rating than 4 indicates that it is better to do the task from the lab. Ratings with lower mean rating than 4 means that it is better to do the given action from home.
 
-```{r}
+```{r, message = FALSE}
 aspects <- 
     processed %>%
     select(participant_id, contains("home_office_aspect")) %>%
@@ -227,6 +265,25 @@ aspects <-
   arrange(better_home, mean)
 ```
 
+```{r}
+aspects %>%
+  ggplot() +
+  aes(x = fct_reorder(aspect, mean),
+      y = mean) +
+  geom_bar(stat = "identity") +
+  scale_y_continuous(
+    expand = c(0, 0.4),
+    breaks = c(1, 2, 3, 4, 5, 6, 7),
+    labels = c("1\nAt home", "2", "3", "4", "5", "6", "7\nIn the office")) +
+  coord_flip(ylim = c(1, 7)) +
+  geom_hline(yintercept = 4, linetype = "dashed", color = "#828282", size = 1) +
+  labs(x = "Aspects",
+        y = "Mean rating") +
+  papaja::theme_apa()
+```
+
+### Main advantages of working from home
+
 The three lowest-rated advantages of working from home
 
 ```{r}
@@ -235,7 +292,7 @@ aspects %>%
   slice_min(mean, n = 3)
 ```
 
-## Main advantages of working in the lab
+### Main advantages of working in the lab
 
 The three highest-rated advantages of working from the lab
 
@@ -244,7 +301,6 @@ aspects %>%
   filter(better_home == 0L) %>% 
   slice_max(mean, n = 3)
 ```
-
 
 ## How much did researchers work from home before the pandemic?
 
@@ -324,7 +380,8 @@ See the distinct values of the difference between the ideal percentage of workin
 ```{r}
 processed %>% 
   distinct(future_prior_diff) %>% 
-  arrange(future_prior_diff)
+  arrange(future_prior_diff) %>% 
+  knitr::kable()
 ```
 
 Showing a descriptive comparison.
@@ -377,26 +434,118 @@ Number of kids in this subsample.
 ```{r}
 processed %>% 
   filter(living_sit %in% living_sit_include) %>% 
-  select(number_of_children) %>% 
-  arrange(number_of_children)
+  count(number_of_children)
 ```
 
 ```{r}
 processed %>% 
   filter(living_sit %in% living_sit_include,
          !is.na(now_before_eff)) %>% 
-  count(now_before_eff) %>% 
-  mutate(N = sum(n),
-         prop = round(n / N * 100, 2))
+  percent_by_group(now_before_eff)
 ```
 
 ### What circumstances make a researcher with children more or less efficient in working from home during and after the lockdown?
 
-We need to talk about this.
+```{r}
+# Variables that we will use to create the subgroups
+subvars <- c("position", "area_of_research", "wokrplace_type", "data_coll_remote", "gender", "age", "edu_duties", "team_work", "partner_work")
+
+# Subset of data: respondents living with kids
+with_child <-
+  processed %>% 
+  filter(living_sit %in% living_sit_include,
+         prior_home_prop_1 != 100)
+
+# Create dataframe for storing the subgroup selection and efficiency ratings
+sub_selection <-
+  tibble(
+    subvars = syms(subvars)
+  )
+
+# Create function to count the number of respondents on each level of the subgroup
+# and exclude levels where the level has less than 30 respondent in it
+filter_subgroup_levels <- function(subvar_name) {
+  subvar_name <- dplyr::enquo(subvar_name)
+  with_child %>%
+    filter(!is.na(!!subvar_name)) %>% 
+    count(!!subvar_name) %>% 
+    filter(n > 20)
+}
+
+# Example of the subgroup efficiency output
+with_child %>% 
+  filter(position == "assistant professor") %>% 
+  percent_by_group(now_later_eff)
+
+# Function to calculate efficiency proportions for subgroup
+efficiency_subgroups_levels <- function(subvar_name, subgroup_name) {
+  subvar_name <- dplyr::enquo(subvar_name)
+  map(subgroup_name,
+      ~ with_child %>% 
+        filter(!!subvar_name == .x) %>% 
+        percent_by_group(now_later_eff)) %>% 
+    set_names(subgroup_name)
+}
+
+# Filtering the subgroups and calculating efficiency proportions for each subgroup
+sub_selection <-
+  sub_selection %>% 
+  mutate(subgroup_desc = purrr::map(subvars, filter_subgroup_levels),
+         subgroup_vec = purrr::map2(subvars, subgroup_desc, ~ pull(.y, .x)),
+         subgroup_eff_desc = purrr::map2(subvars, subgroup_vec, efficiency_subgroups_levels),
+         subgroup_eff_desc = set_names(subgroup_eff_desc, map(subvars, ~rlang::as_name(.x))))
+
+# Simplifying the results to a df
+sub_selection_df <- 
+  sub_selection %>% 
+  select(subgroup_eff_desc, subvars) %>%
+  unnest_longer(subgroup_eff_desc) %>% 
+  unnest(subgroup_eff_desc) %>% 
+  rename(subgroups = subgroup_eff_desc_id)
+
+# Get levels less efficiency proportions
+sub_less_eff <-
+  sub_selection_df %>% 
+  filter(now_later_eff == "less efficient") %>% 
+  arrange(desc(prop))
+
+# Get levels more efficiency proportions
+sub_more_eff <-
+  sub_selection_df %>% 
+  filter(now_later_eff == "more efficient") %>% 
+  arrange(desc(prop))
+
+# Get levels similarly efficiency proportions
+sub_similarly_eff <-
+  sub_selection_df %>% 
+  filter(now_later_eff == "similarly efficient") %>% 
+  arrange(desc(prop))
+```
+
+#### Print less efficient subgroups by proportion
+
+```{r}
+sub_less_eff %>% 
+  knitr::kable()
+```
+
+#### Print less efficient subgroups by proportion
+
+```{r}
+sub_more_eff %>% 
+  knitr::kable()
+```
+
+#### Print similarly efficient subgroups by proportion
+
+```{r}
+sub_similarly_eff %>% 
+  knitr::kable()
+```
 
 ### Which subgroup would benefit the most/less from working more from home? [interested factors: seniority, data collection method]
 
-We need to talk about this.
+We need to talk about this. We decide this later when we see the other results.
 
 ### Would it be ideal and possible for those with teaching duties to work proportionally more from home in the future than before the pandemic?
 
