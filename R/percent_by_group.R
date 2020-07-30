@@ -2,5 +2,8 @@ percent_by_group <- function(data, var) {
   var <- dplyr::enquo(var)
   data %>% 
     dplyr::count(!!var) %>% 
-    dplyr::ungroup()
+    dplyr::ungroup() %>% 
+    dplyr::mutate(N = sum(n),
+                  prop = n / N * 100) %>% 
+    dplyr::arrange(n)
 }

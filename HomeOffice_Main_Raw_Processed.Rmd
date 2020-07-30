@@ -7,14 +7,14 @@ output: html_document
 
 # Loading packages
 
-```{r}
+```{r, message = FALSE, warning = FALSE}
 library(tidyverse)
 library(jsonlite)
 ```
 
 # Importing data
 
-```{r}
+```{r, message = FALSE}
 raw <- read_tsv("Data/Main/Raw/HomeOffice_Main_Raw_data.tsv")
 ```
 
@@ -80,18 +80,41 @@ raw <-
   filter(distribution_channel != "preview")
 ```
 
-# Drop not completed 
+There were `r nrow(raw)` participants who started the questionnaire.
 
-The distinct values of survey progress are `r raw %>% count(progress)`.
+## Response date range
 
 ```{r}
+raw %>% 
+  mutate(recorded_date = lubridate::as_datetime(recorded_date)) %>% 
+  summarise(min_date = min(recorded_date),
+            max_date = max(recorded_date))
+```
+
+# Drop not completed 
+
+The distinct values of survey progress.
+
+```{r}
+raw %>% 
+  count(progress)
+```
+
+Drop not completed responses.
+
+```{r}
+not_completed <-
+  raw %>% 
+  mutate(progress = as.integer(progress)) %>% 
+  filter(progress != 100)
+
 raw <- 
   raw %>% 
   mutate(progress = as.integer(progress)) %>% 
   filter(progress == 100)
 ```
 
-There are `r nrow(raw)` response left after excluding the non finished responses.
+There are `r nrow(raw)` response left after excluding the non finished responses. Most of them only answer the first question.
 
 # Distributon of responses from different sources
 
@@ -103,7 +126,7 @@ raw %>%
 
 # Deal with free text responses
 
-Based on agreement amng MK. and BA. where respondents provided free text responses we will use the "Other" label in tha analysis. Detailed responses will be available in the openly shared dataset. 
+Based on agreement amng MK. and BA. where respondents provided free text responses we will use the "Other" label in the analysis. Detailed responses will be available in the openly shared dataset. 
 
 ```{r}
 raw <- 
