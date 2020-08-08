@@ -36,7 +36,7 @@ used <- read_xlsx("Data/Sample/HomeOffice_Sample_Used.xlsx")
 
 Load previously used batches.
 
-These batchess were used for the pilot survey:
+These batches were used for the pilot survey:
 
 ```{r}
 batch_1 <- read_xlsx("Data/Sample/HomeOffice_Sample_Batch_1.xlsx")
@@ -48,9 +48,9 @@ batch_2 <- read_xlsx("Data/Sample/HomeOffice_Sample_Batch_2.xlsx")
 
 # Descriptives
 
-We have downloaded the metainformation of `r email %>% distinct(doi) %>% filter(!is.na(doi)) %>% count()` individual articles.
+We have downloaded the meta-information of `r email %>% distinct(doi) %>% filter(!is.na(doi)) %>% count()` individual articles.
 
-We could extract the email addresses of `r email %>% distinct(email) %>% filter(!is.na(email)) %>% count()` corresponding authors of these articles. This does not mean that all email addresses are working as the automatized scraper code coulde make mistakes.
+We could extract the email addresses of `r email %>% distinct(email) %>% filter(!is.na(email)) %>% count()` corresponding authors of these articles. This does not mean that all email addresses are working as the automatized scraper code could make mistakes.
 
 At the time of our data collection there were `r journal %>% distinct(publicationname) %>% count()` journals in the Science Direct database.
 

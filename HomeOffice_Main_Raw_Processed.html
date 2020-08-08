@@ -364,7 +364,7 @@ summary {
 
 <h1 class="title toc-ignore">HomeOffice_Raw_Processed</h1>
 <h4 class="author">Marton Kovacs</h4>
-<h4 class="date">28 July, 2020</h4>
+<h4 class="date">08 August, 2020</h4>
 
 </div>
 
@@ -474,7 +474,7 @@ raw &lt;-
 </div>
 <div id="deal-with-free-text-responses" class="section level1">
 <h1>Deal with free text responses</h1>
-<p>Based on agreement amng MK. and BA. where respondents provided free text responses we will use the “Other” label in the analysis. Detailed responses will be available in the openly shared dataset.</p>
+<p>Based on agreement amng MK. and BA. where respondents provided free text responses we will use the “Other” label in the analysis. Detailed responses will be available in the openly shared RAW dataset.</p>
 <pre class="r"><code>raw &lt;- 
   raw %&gt;% 
   mutate(area_of_research = case_when(area_of_research == &quot;Other:&quot; ~ &quot;Other&quot;,
@@ -539,10 +539,41 @@ raw &lt;-
 <p>For the aspects 1 mean at home, and 7 means in the office.</p>
 <pre class="r"><code>raw &lt;- 
   raw %&gt;% 
-  mutate_at(vars(contains(&quot;home_office_aspect&quot;)), ~ case_when(. == &quot;At home\n\n1\n&quot; ~ &quot;1&quot;,
-                                                             . == &quot;In the office\n7\n&quot; ~ &quot;7&quot;,
-                                                             TRUE ~ .)) %&gt;% 
-  mutate_at(vars(contains(&quot;home_office_aspect&quot;)), as.integer)</code></pre>
+  mutate_at(
+    vars(contains(&quot;home_office_aspect&quot;)),
+    ~ case_when(. == &quot;At home\n\n1\n&quot; ~ &quot;1&quot;,
+                . == &quot;In the office\n7\n&quot; ~ &quot;7&quot;,
+                TRUE ~ .)
+    ) %&gt;% 
+  mutate_at(
+    vars(contains(&quot;home_office_aspect&quot;)),
+    as.integer
+    )</code></pre>
+</div>
+<div id="modify-responses-based-on-the-free-text-comments-of-the-respondents" class="section level1">
+<h1>Modify responses based on the free text comments of the respondents</h1>
+<p>Based on the free text responses and comments of the participants, we will change or drop some of the respondents’ responses. The decision was made by B.A. and M.K.</p>
+<ul>
+<li>“R_1QnGd6VXG6cdMgo” drop “position”</li>
+<li>“R_2yjhk3WJk5Dlu2U” drop “home_office_aspect_”</li>
+<li>“R_3MLiLE9GyTaVesi” drop “now_later_eff”</li>
+<li>“R_1jWexr1mLRm81cw” change “No” to “Yes (including if someone else does it for me)” in “data_coll_remote”</li>
+<li>“R_2rBI1toGC78B4xB” drop “now_before_eff”</li>
+</ul>
+<pre class="r"><code>raw &lt;- 
+  raw %&gt;% 
+  mutate(position = case_when(participant_id == &quot;R_1QnGd6VXG6cdMgo&quot; ~ NA_character_,
+                              TRUE ~ position),
+         now_later_eff = case_when(participant_id == &quot;R_3MLiLE9GyTaVesi&quot; ~ NA_character_,
+                                   TRUE ~ now_later_eff),
+         data_coll_remote = case_when(participant_id == &quot;R_1jWexr1mLRm81cw&quot; ~ &quot;Yes (including if someone else does it for me)&quot;,
+                                      TRUE ~ data_coll_remote),
+         now_before_eff = case_when(participant_id == &quot;R_2rBI1toGC78B4xB&quot; ~ NA_character_,
+                                    TRUE ~ now_before_eff)) %&gt;% 
+  mutate_at(
+    vars(starts_with(&quot;home_office_aspect_&quot;)),
+    ~ case_when(participant_id == &quot;R_2yjhk3WJk5Dlu2U&quot; ~ NA_integer_,
+                TRUE ~ .))</code></pre>
 </div>
 <div id="save-data" class="section level1">
 <h1>Save data</h1>

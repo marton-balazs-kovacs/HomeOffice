@@ -7,13 +7,13 @@ output: html_document
 
 # Loading packages
 
-```{r}
+```{r, message = FALSE, warning = FALSE}
 library(tidyverse)
 ```
 
 # Importing data
 
-```{r}
+```{r, message = FALSE, warning = FALSE}
 source <- read_csv("Data/Main/Source/HomeOffice_Main_July+17,+2020_11.28.csv")
 ```
 
@@ -33,17 +33,14 @@ comment <-
 write_excel_csv(comment, "Data/Main/Source/HomeOffice_Main_FreeText_data.csv")
 ```
 
-# Delete cells cells with personal data in them
-
-```{r}
-
-```
+The team members read through the free text responses and they have found no personal data in them. However, some of the responses will be modified or dropped based on the comment of the respondent in the "HomeOffice_Main_Raw_Processed.Rmd" file.
 
 # Write raw data
 
+The university names will be left out from the raw dataset as well that will be shared openly.
+
 ```{r}
 source %>% 
-  select(-comment) %>% 
+  select(-comment, -uni) %>% 
   write_tsv(., "Data/Main/Raw/HomeOffice_Main_Raw_data.tsv")
 ```
-

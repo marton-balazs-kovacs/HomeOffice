@@ -67,6 +67,8 @@ source("R/round_any.R")
 # source("R/create_data_structure.R")
 # create_data_structure("Data")
 
+# The dataset does not contain the uni variable anymore as it should not be shared with others
+
 # Load data
 uni_data <- read_tsv("Data/Main/Processed/HomeOffice_Main_Processed_data.tsv")
 

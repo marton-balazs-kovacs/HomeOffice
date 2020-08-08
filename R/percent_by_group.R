@@ -1,9 +1,10 @@
-percent_by_group <- function(data, var) {
-  var <- dplyr::enquo(var)
-  data %>% 
-    dplyr::count(!!var) %>% 
+percent_by_group <- function(df, var) {
+  df %>% 
+    dplyr::count({{var}}) %>% 
     dplyr::ungroup() %>% 
     dplyr::mutate(N = sum(n),
-                  prop = n / N * 100) %>% 
-    dplyr::arrange(n)
+                  prop = round(n / N * 100, 2)) %>% 
+    dplyr::arrange(factor({{var}}, levels = c("less efficient",
+                                              "similarly efficient",
+                                              "more efficient")))
 }
