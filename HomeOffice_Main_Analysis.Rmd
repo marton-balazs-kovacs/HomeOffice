@@ -55,7 +55,7 @@ processed <-
   processed %>% 
   mutate_at(all_of(subvars),
             as.character) %>% 
-    mutate_at(all_of(subvars),
+  mutate_at(all_of(subvars),
             replace_na, "not applicable")
 ```
 
@@ -86,8 +86,8 @@ background_inf <-
                              subvars == "number_of_children" ~ "Number of children")) %>% 
   rename(`Background information question` = subvars,
          Subgroups = levels,
-         `Number of respondents in the subgroup` = n,
-         Proportion = prop)
+         `Number of responses` = n,
+         `Proportion of the subgroup` = prop)
 ```
 
 ```{r}
@@ -108,7 +108,7 @@ map(subvars, ~ apa_barplot(processed, .x))
 percent_by_group(processed, working_home_time)
 ```
 
-`r filter(processed, working_home_time == "Yes") %>% count()`% of the surveyed researchers worked more from home during the pandemic lockdown.
+`r filter(processed, working_home_time == "Yes") %>% count()` researchers worked more from home during the pandemic lockdown.
 
 # Efficiency of remote working
 ## During the lockdown
@@ -119,8 +119,7 @@ processed %>%
 
 now_before_eff_data <-
   processed %>% 
-  filter(working_home_time == "Yes",
-         !is.na(now_before_eff))
+  filter(working_home_time == "Yes")
 
 now_before_eff_desc <-
   now_before_eff_data %>% 
@@ -129,28 +128,33 @@ now_before_eff_desc <-
 now_before_eff_desc
 ```
 
-The number of trials where the efficiency rating is missing is `r filter(processed, is.na(now_before_eff)) %>% count() %>% pull(n)`. It is because this question was not shown to those who said that they are not working more from home. This number also includes a case, where the response was dropped because the respondent stated in the comment that he did not understand the question.
+The number of trials where the efficiency rating is missing is `r filter(processed, is.na(now_before_eff)) %>% count() %>% pull(n)`. It is because this question was not shown to those who said that they are not working more from home.
 
 `r filter(now_before_eff_desc, now_before_eff == "less efficient") %>% pull(prop)`% of the surveyed scientists who worked more from home during the coronavirus lockdown found that due to working more from home their research became, in general, less efficient, `r filter(now_before_eff_desc, now_before_eff == "more efficient") %>% pull(prop)`% found it more efficient, and `r filter(now_before_eff_desc, now_before_eff == "similarly efficient") %>% pull(prop)`% found no difference compared to working before the lockdown. (only from those working from home).
 
 ```{r}
-eff_during_plot_data <-
-  now_before_eff_data %>% 
-  mutate(now_before_eff = forcats::fct_relevel(now_before_eff, c("less efficient", "similarly efficient", "more efficient"))) %>%
-  percent_by_group(now_before_eff)
+y_max_during <- round_any(max(now_before_eff_desc$prop), 10, f = ceiling)
 
-y_max_during <- round_any(max(eff_during_plot_data$prop), 0.1, f = ceiling)
-
-eff_during_plot_data %>%
+now_before_eff_plot <- 
+  now_before_eff_desc %>% 
+  mutate(label = glue::glue("{n} / {N}"),
+         now_before_eff = stringr::str_to_title(now_before_eff),
+         now_before_eff = forcats::fct_relevel(now_before_eff, c("Less Efficient", "Similarly Efficient", "More Efficient"))) %>% 
   ggplot() +
   aes(x = now_before_eff,
       y = prop) +
   geom_bar(stat = "identity") +
+  geom_text(aes(label = label), vjust = -0.2, size = 8) +
   scale_y_continuous(expand = c(0, 0),
-                     limits = c(0, y_max_during)) +
-  labs(x = "Change in the efficiency of the research work",
-        y = "Percentage of responses") +
-  papaja::theme_apa()
+                     limits = c(0, y_max_during),
+                     label = scales::label_percent(scale = 1)) +
+  labs(x = "Change in the Efficiency of the Research Work",
+        y = "Percentage of Responses") +
+  papaja::theme_apa() +
+  theme(axis.title = element_text(size = 20),
+        axis.text = element_text(size = 15))
+
+now_before_eff_plot
 ```
 
 ## After the lockdown
@@ -177,23 +181,34 @@ The number of respondents whose response was excluded because they used to work 
 `r filter(now_later_eff_desc, now_later_eff == "less efficient") %>% pull(prop)`% of the surveyed scientists assume that working more from home after the coronavirus lockdown could make their research, in general, less efficient, `r filter(now_later_eff_desc, now_later_eff == "more efficient") %>% pull(prop)`% found it more efficient, and `r filter(now_later_eff_desc, now_later_eff == "similarly efficient") %>% pull(prop)`% found no difference compared to the time before the lockdown. (excluding 100% home workers).
 
 ```{r}
-eff_after_plot_data <-
-  now_later_eff_data %>% 
-  mutate(now_later_eff = forcats::fct_relevel(now_later_eff, c("less efficient", "similarly efficient", "more efficient"))) %>%
-  percent_by_group(now_later_eff)
+y_max_after <- round_any(max(now_later_eff_desc$prop), 10, f = ceiling)
 
-y_max_during <- round_any(max(eff_after_plot_data$prop), 0.1, f = ceiling)
-
-eff_after_plot_data %>%
+now_later_eff_plot <- 
+  now_later_eff_desc %>%
+  mutate(label = glue::glue("{n} / {N}"),
+         now_later_eff = stringr::str_to_title(now_later_eff),
+         now_later_eff = forcats::fct_relevel(now_later_eff, c("Less Efficient", "Similarly Efficient", "More Efficient"))) %>% 
   ggplot() +
   aes(x = now_later_eff,
       y = prop) +
   geom_bar(stat = "identity") +
+  geom_text(aes(label = label), vjust = -0.2, size = 8) +
   scale_y_continuous(expand = c(0, 0),
-                     limits = c(0, y_max_during)) +
+                     limits = c(0, y_max_after),
+                     label = scales::label_percent(scale = 1)) +
   labs(x = "Change in the efficiency of the research work",
         y = "Percentage of responses") +
-  papaja::theme_apa()
+  papaja::theme_apa() +
+  theme(axis.title = element_text(size = 20),
+        axis.text = element_text(size = 15))
+
+# Save for the paper
+ggsave("Figures/Fig1.tiff", device = "tiff", plot = now_later_eff_plot, dpi = 300, width = 208, height = 118, units = "mm")
+
+# Save for the manuscript
+ggsave("Figures/Fig1.png", device = "png", plot = now_later_eff_plot, dpi = 300, width = 208, height = 118, units = "mm")
+
+now_later_eff_plot
 ```
 
 ## Investigating aspects of research
@@ -226,8 +241,8 @@ aspects <-
                             aspect == "home_office_aspect_14" ~ "Keeping good relationship\nwith colleagues",
                             aspect == "home_office_aspect_15" ~ "Developing new skills")) %>% 
   group_by(aspect) %>% 
-  summarise(mean = mean(rating, na.rm = TRUE),
-            sd = sd(rating, na.rm = TRUE)) %>% 
+  summarise(mean = round(mean(rating, na.rm = TRUE), 2),
+            sd = round(sd(rating, na.rm = TRUE), 2)) %>% 
   mutate(better_home = case_when(mean > 4 ~ 0L,
                                  mean < 4 ~ 1L,
                                  mean == 4 ~ NA_integer_)) %>% 
@@ -235,7 +250,8 @@ aspects <-
 ```
 
 ```{r}
-aspects %>%
+aspects_plot <- 
+  aspects %>%
   ggplot() +
   aes(x = fct_reorder(aspect, mean),
       y = mean) +
@@ -243,12 +259,24 @@ aspects %>%
   scale_y_continuous(
     expand = c(0, 0.4),
     breaks = c(1, 2, 3, 4, 5, 6, 7),
-    labels = c("1\nAt home", "2", "3", "4", "5", "6", "7\nIn the office")) +
+    labels = c("1\nAt Home", "2", "3", "4", "5", "6", "7\nIn the Office")) +
   coord_flip(ylim = c(1, 7)) +
-  geom_hline(yintercept = 4, linetype = "dashed", color = "#828282", size = 1) +
+  geom_hline(yintercept = 4, linetype = "dashed", color = "#828282", size = 2) +
+  # geom_text(aes(label = as.character(mean)), size = 8, hjust = - 0.3) +
   labs(x = "Aspects",
         y = "Mean rating") +
-  papaja::theme_apa()
+  papaja::theme_apa() +
+  theme(axis.title = element_text(size = 20),
+        axis.text = element_text(size = 15),
+        plot.margin = unit(c(.5, .5, .5, .5), "cm"))
+
+# Save for the paper
+ggsave("Figures/Fig2.tiff", device = "tiff", plot = aspects_plot, dpi = 300, width = 308, height = 208, units = "mm")
+
+# Save for the manuscript
+ggsave("Figures/Fig2.png", device = "png", plot = aspects_plot, dpi = 300, width = 308, height = 208, units = "mm")
+
+aspects_plot
 ```
 
 ### Main advantages of working from home
@@ -295,10 +323,12 @@ percentage_plot_data %>%
                      breaks = scales::pretty_breaks()) +
   scale_x_continuous(expand = c(0, 0),
                      breaks = seq(0, 100, 10),
-                     labels = seq(0, 100, 10)) +
+                     labels = scales::label_percent(scale = 1)) +
   labs(x = "Percentage of worktime working from home prior to pandemic",
        y = "Density") +
-  papaja::theme_apa()
+  papaja::theme_apa() +
+  theme(axis.title = element_text(size = 20),
+        axis.text = element_text(size = 15))
 ```
 
 ## How much would researchers work from home after the pandemic?
@@ -315,16 +345,19 @@ percentage_plot_data %>%
                      breaks = scales::pretty_breaks()) +
   scale_x_continuous(expand = c(0, 0),
                      breaks = seq(0, 100, 10),
-                     labels = seq(0, 100, 10)) +
+                     labels = scales::label_percent(scale = 1)) +
   labs(x = "Percentage of worktime working from home",
        y = "Density") +
-  papaja::theme_apa()
+  papaja::theme_apa() +
+  theme(axis.title = element_text(size = 20),
+        axis.text = element_text(size = 15))
 ```
 
-Prior and ideal percentages of working from home on the smae figure.
+Prior and ideal percentages of working from home on the same figure.
 
 ```{r}
-percentage_plot_data %>%
+percentage_plot <-
+  percentage_plot_data %>%
   ggplot() +
   aes(x = percent,
       color = time) +
@@ -333,13 +366,27 @@ percentage_plot_data %>%
                      breaks = scales::pretty_breaks()) +
   scale_x_continuous(expand = c(0, 0),
                      breaks = seq(0, 100, 10),
-                     labels = seq(0, 100, 10)) +
+                     labels = scales::label_percent(scale = 1)) +
   scale_fill_manual(values = c('#000000', '#D3D3D3')) +
   scale_color_manual(values=c('#000000', '#D3D3D3'))+
   labs(x = "Percentage of worktime working from home",
        y = "Density",
        color = "Time") +
-  papaja::theme_apa()
+  papaja::theme_apa() +
+  theme(axis.title = element_text(size = 20),
+        axis.text = element_text(size = 15),
+        legend.position = c(.8, .9),
+        legend.title = element_blank(), 
+        legend.text = element_text(size = 18),
+        plot.margin = unit(c(1, 1, 1, 1), "cm"))
+
+# Save for the paper
+ggsave("Figures/Fig3.tiff", device = "tiff", plot = percentage_plot, dpi = 300, width = 308, height = 208, units = "mm")
+
+# Save for the manuscript
+ggsave("Figures/Fig3.png", device = "png", plot = percentage_plot, dpi = 300, width = 308, height = 208, units = "mm")
+
+percentage_plot
 ```
 
 ## Would it be possible to work more from home in the future?
@@ -374,13 +421,16 @@ processed %>%
   count()
 ```
 
-Taken all their other duties (education, administration, etc.) and provided circumstances at home (infrastructure, level of disturbance) of researchers think that it would be possible to work more from home in the future. (excluding 100% home workers, including only wishing to work more from home, OF those who find working from home more efficient)
+Taken all their other duties (education, administration, etc.) and provided circumstances at home (infrastructure, level of disturbance) of researchers think that it would be possible to work more from home in the future. (excluding 100% home workers, including only wishing to work more from home)
+
+This sentence was preregistered: _OF those who find working from home more efficient_, but we left this filter out from the analysis.
 
 ```{r}
 processed %>% 
   filter(prior_home_prop_1 != 100,
-         future_prior_diff > 0,
-         now_later_eff == "more efficient") %>% 
+         future_prior_diff > 0
+         # now_later_eff == "more efficient"
+         ) %>% 
   count(feasible) %>% 
   mutate(N = sum(n),
          prop = n / N * 100)
@@ -499,7 +549,7 @@ subgroup_eff_during <-
          `Efficiency ratings` = now_before_eff,
          `Number of responses to the efficiency ratings` = n,
          `Number of respondents in the subgroup` = N,
-         Proportion = prop)
+         `Proportion of the subgroup` = prop)
 ```
 
 ```{r}
@@ -550,7 +600,7 @@ subgroup_eff_later <-
          `Efficiency ratings` = now_later_eff,
          `Number of responses to the efficiency ratings` = n,
          `Number of respondents in the subgroup` = N,
-         Proportion = prop)
+         `Proportion of the subgroup` = prop)
 ```
 
 ```{r}
@@ -563,26 +613,15 @@ papaja::apa_table(
 
 ### Would it be ideal and possible for those with teaching duties to work proportionally more from home in the future than before the pandemic?
 
-Would it be possible?
+Even among those who have teaching duties at work, xx% think that more working from home would be ideal,  and possible and their work would be more efficient.
 
 ```{r}
 processed %>% 
-  filter(edu_duties == "Yes") %>% 
+  filter(prior_home_prop_1 != 100,
+         future_prior_diff > 0,
+         # now_later_eff == "more efficient",
+         edu_duties == "Yes") %>% 
   count(feasible) %>% 
   mutate(N = sum(n),
-         prop = round(n / N * 100, 2))
+         prop = n / N * 100)
 ```
-
-Would it be ideal?
-
-```{r}
-processed %>% 
-  filter(edu_duties == "Yes") %>% 
-  mutate(more_from_home = case_when(future_prior_diff > 0 ~ "Respondent wants to work more from home",
-                                    future_prior_diff < 0 ~ "Respondent wants to work less from home",
-                                    future_prior_diff == 0 ~ "Respondent working the ideal amount of time from home")) %>% 
-  count(more_from_home) %>%
-  mutate(N = sum(n),
-         prop = round(n / N * 100, 2))
-```
-

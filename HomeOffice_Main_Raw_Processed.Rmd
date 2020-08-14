@@ -222,7 +222,6 @@ Based on the free text responses and comments of the participants, we will chang
 * "R_2yjhk3WJk5Dlu2U" drop "home_office_aspect_"
 * "R_3MLiLE9GyTaVesi" drop "now_later_eff"
 * "R_1jWexr1mLRm81cw" change "No" to "Yes (including if someone else does it for me)" in "data_coll_remote"
-* "R_2rBI1toGC78B4xB" drop "now_before_eff"
 
 ```{r}
 raw <- 
@@ -232,9 +231,7 @@ raw <-
          now_later_eff = case_when(participant_id == "R_3MLiLE9GyTaVesi" ~ NA_character_,
                                    TRUE ~ now_later_eff),
          data_coll_remote = case_when(participant_id == "R_1jWexr1mLRm81cw" ~ "Yes (including if someone else does it for me)",
-                                      TRUE ~ data_coll_remote),
-         now_before_eff = case_when(participant_id == "R_2rBI1toGC78B4xB" ~ NA_character_,
-                                    TRUE ~ now_before_eff)) %>% 
+                                      TRUE ~ data_coll_remote)) %>% 
   mutate_at(
     vars(starts_with("home_office_aspect_")),
     ~ case_when(participant_id == "R_2yjhk3WJk5Dlu2U" ~ NA_integer_,

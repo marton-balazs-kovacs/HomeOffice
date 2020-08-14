@@ -364,7 +364,7 @@ summary {
 
 <h1 class="title toc-ignore">HomeOffice_Raw_Processed</h1>
 <h4 class="author">Marton Kovacs</h4>
-<h4 class="date">08 August, 2020</h4>
+<h4 class="date">14 August, 2020</h4>
 
 </div>
 
@@ -558,7 +558,6 @@ raw &lt;-
 <li>“R_2yjhk3WJk5Dlu2U” drop “home_office_aspect_”</li>
 <li>“R_3MLiLE9GyTaVesi” drop “now_later_eff”</li>
 <li>“R_1jWexr1mLRm81cw” change “No” to “Yes (including if someone else does it for me)” in “data_coll_remote”</li>
-<li>“R_2rBI1toGC78B4xB” drop “now_before_eff”</li>
 </ul>
 <pre class="r"><code>raw &lt;- 
   raw %&gt;% 
@@ -567,9 +566,7 @@ raw &lt;-
          now_later_eff = case_when(participant_id == &quot;R_3MLiLE9GyTaVesi&quot; ~ NA_character_,
                                    TRUE ~ now_later_eff),
          data_coll_remote = case_when(participant_id == &quot;R_1jWexr1mLRm81cw&quot; ~ &quot;Yes (including if someone else does it for me)&quot;,
-                                      TRUE ~ data_coll_remote),
-         now_before_eff = case_when(participant_id == &quot;R_2rBI1toGC78B4xB&quot; ~ NA_character_,
-                                    TRUE ~ now_before_eff)) %&gt;% 
+                                      TRUE ~ data_coll_remote)) %&gt;% 
   mutate_at(
     vars(starts_with(&quot;home_office_aspect_&quot;)),
     ~ case_when(participant_id == &quot;R_2yjhk3WJk5Dlu2U&quot; ~ NA_integer_,
