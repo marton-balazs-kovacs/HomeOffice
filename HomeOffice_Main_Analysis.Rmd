@@ -192,7 +192,7 @@ now_later_eff_plot <-
   aes(x = now_later_eff,
       y = prop) +
   geom_bar(stat = "identity") +
-  geom_text(aes(label = label), vjust = -0.2, size = 8) +
+  geom_text(aes(label = label), vjust = -0.2, size = 5) +
   scale_y_continuous(expand = c(0, 0),
                      limits = c(0, y_max_after),
                      label = scales::label_percent(scale = 1)) +
@@ -616,12 +616,15 @@ papaja::apa_table(
 Even among those who have teaching duties at work, xx% think that more working from home would be ideal,  and possible and their work would be more efficient.
 
 ```{r}
-processed %>% 
-  filter(prior_home_prop_1 != 100,
-         future_prior_diff > 0,
+processed %>%
+  filter(
+    prior_home_prop_1 != 100,
+    future_prior_diff > 0,
          # now_later_eff == "more efficient",
-         edu_duties == "Yes") %>% 
-  count(feasible) %>% 
+         edu_duties == "Yes"
+    ) %>%
+  group_by(edu_duties) %>% 
+  count(feasible) %>%
   mutate(N = sum(n),
          prop = n / N * 100)
 ```
