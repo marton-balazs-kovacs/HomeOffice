@@ -213,6 +213,16 @@ now_later_eff_plot
 
 ## Investigating aspects of research
 
+The number of respondents included in this analysis.
+
+```{r}
+processed %>%
+  filter_at(
+    vars(contains("home_office_aspect")),
+    all_vars(!is.na(.))) %>% 
+  count()
+```
+
 We calculate the means and SDs of each aspects ratings. Aspects with higher rating than 4 indicates that it is better to do the task from the lab. Ratings with lower mean rating than 4 means that it is better to do the given action from home.
 
 _note: Based on one comment we dropped the aspect ratings of one respondent during data processing._
@@ -300,6 +310,12 @@ aspects %>%
 ```
 
 ## How much did researchers work from home before the pandemic?
+
+The number of responses used for this analysis.
+
+```{r}
+nrow(processed)
+```
 
 The distribution of percentages of working from your home time before the pandemic.
 
