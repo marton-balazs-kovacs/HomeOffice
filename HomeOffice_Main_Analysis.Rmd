@@ -187,28 +187,31 @@ now_later_eff_plot <-
   now_later_eff_desc %>%
   mutate(label = glue::glue("{n} / {N}"),
          now_later_eff = stringr::str_to_title(now_later_eff),
-         now_later_eff = forcats::fct_relevel(now_later_eff, c("Less Efficient", "Similarly Efficient", "More Efficient"))) %>% 
+         now_later_eff = stringr::str_replace(now_later_eff, "\\s", "\n"),
+         now_later_eff = forcats::fct_relevel(now_later_eff, c("Less\nEfficient", "Similarly\nEfficient", "More\nEfficient"))) %>%
   ggplot() +
   aes(x = now_later_eff,
       y = prop) +
   geom_bar(stat = "identity") +
-  geom_text(aes(label = label), vjust = -0.2, size = 5) +
+  geom_text(aes(label = label), hjust = -0.2, size = 5) +
   scale_y_continuous(expand = c(0, 0),
                      limits = c(0, y_max_after),
                      label = scales::label_percent(scale = 1)) +
-  labs(x = "Change in the efficiency of the research work",
-        y = "Percentage of responses") +
+  coord_flip() +
+  labs(y = "Change in the efficiency of the research work",
+       x = "Percentage of responses") +
   papaja::theme_apa() +
   theme(axis.title = element_text(size = 20),
-        axis.text = element_text(size = 15))
+        axis.text = element_text(size = 15),
+        plot.margin = unit(c(1,1,1,1), "cm"))
+
+now_later_eff_plot
 
 # Save for the paper
 ggsave("Figures/Fig1.tiff", device = "tiff", plot = now_later_eff_plot, dpi = 300, width = 208, height = 118, units = "mm")
 
 # Save for the manuscript
 ggsave("Figures/Fig1.png", device = "png", plot = now_later_eff_plot, dpi = 300, width = 208, height = 118, units = "mm")
-
-now_later_eff_plot
 ```
 
 ## Investigating aspects of research
