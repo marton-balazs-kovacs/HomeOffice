@@ -198,11 +198,11 @@ now_later_eff_plot <-
                      limits = c(0, y_max_after),
                      label = scales::label_percent(scale = 1)) +
   coord_flip() +
-  labs(y = "Change in the efficiency of the research work",
-       x = "Percentage of responses") +
+  labs(x = "Change in the efficiency of the research work",
+       y = "Percentage of responses") +
   papaja::theme_apa() +
-  theme(axis.title = element_text(size = 20),
-        axis.text = element_text(size = 15),
+  theme(axis.title = element_text(size = 13),
+        axis.text = element_text(size = 11),
         plot.margin = unit(c(1,1,1,1), "cm"))
 
 now_later_eff_plot
