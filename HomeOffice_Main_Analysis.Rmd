@@ -181,22 +181,19 @@ The number of respondents whose response was excluded because they used to work 
 `r filter(now_later_eff_desc, now_later_eff == "less efficient") %>% pull(prop)`% of the surveyed scientists assume that working more from home after the coronavirus lockdown could make their research, in general, less efficient, `r filter(now_later_eff_desc, now_later_eff == "more efficient") %>% pull(prop)`% found it more efficient, and `r filter(now_later_eff_desc, now_later_eff == "similarly efficient") %>% pull(prop)`% found no difference compared to the time before the lockdown. (excluding 100% home workers).
 
 ```{r}
-y_max_after <- round_any(max(now_later_eff_desc$prop), 10, f = ceiling)
-
 now_later_eff_plot <- 
   now_later_eff_desc %>%
-  mutate(label = glue::glue("{n} / {N}"),
+  mutate(label = glue::glue("{prop}%"),
          now_later_eff = stringr::str_to_title(now_later_eff),
          now_later_eff = stringr::str_replace(now_later_eff, "\\s", "\n"),
          now_later_eff = forcats::fct_relevel(now_later_eff, c("Less\nEfficient", "Similarly\nEfficient", "More\nEfficient"))) %>%
   ggplot() +
   aes(x = now_later_eff,
-      y = prop) +
+      y = n) +
   geom_bar(stat = "identity") +
   geom_text(aes(label = label), hjust = -0.2, size = 5) +
   scale_y_continuous(expand = c(0, 0),
-                     limits = c(0, y_max_after),
-                     label = scales::label_percent(scale = 1)) +
+                     limits = c(0, 330)) +
   coord_flip() +
   labs(x = "Change in the efficiency of the research work",
        y = "Percentage of responses") +
