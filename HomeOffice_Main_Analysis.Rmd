@@ -196,7 +196,7 @@ now_later_eff_plot <-
                      limits = c(0, 330)) +
   coord_flip() +
   labs(x = "Change in the efficiency of the research work",
-       y = "Percentage of responses") +
+       y = "Number of participants") +
   papaja::theme_apa() +
   theme(axis.title = element_text(size = 13),
         axis.text = element_text(size = 11),
