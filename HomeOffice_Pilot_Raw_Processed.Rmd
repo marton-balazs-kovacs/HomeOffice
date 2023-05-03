@@ -2,6 +2,8 @@
 title: "HomeOffice_Pilot_Raw_Processed"
 author: "Marton Kovacs"
 output: html_document
+editor_options: 
+  chunk_output_type: console
 ---
 
 # Load pacakges
